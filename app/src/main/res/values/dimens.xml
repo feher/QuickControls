@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="notification_icon_size">32dp</dimen>
+    <dimen name="notification_icon_size_primary">28dp</dimen>
+    <dimen name="notification_icon_size_secondary">16dp</dimen>
+    <dimen name="notification_icon_margin">12dp</dimen>
+</resources>
