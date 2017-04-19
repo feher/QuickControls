@@ -5,6 +5,7 @@
     <color name="colorAccent">#FF4081</color>
     <color name="notification_icon">#FFAAAAAA</color>
     <color name="notification_icon_on">#FFFFCC00</color>
+    <color name="notification_volume_off">#FFEE5500</color>
     <color name="notification_background">#FF555555</color>
     <color name="notification_volume_bar">#FFFFCC00</color>
     <color name="notification_volume_bar_background">#FFFFFFFF</color>
