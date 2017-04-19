@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <PreferenceCategory
+        android:title="General">
+
+        <EditTextPreference
+            android:defaultValue="30"
+            android:key="volume_muted_timeout"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:summary="Amount of seconds for which the volume is muted."
+            android:title="Muted volume timeout"/>
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="Small notification">
+
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="small_show_volume_updown"
+            android:summary="Show music volume up/down slider."
+            android:title="Music volume slider"/>
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="small_show_volume_mute_with_timeout"
+            android:summary='Show "Mute music with timeout" button.'
+            android:title="Mute music with timeout"/>
+    </PreferenceCategory>
+
+</PreferenceScreen>
