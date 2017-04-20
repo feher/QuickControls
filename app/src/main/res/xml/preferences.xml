@@ -3,29 +3,70 @@
 
     <PreferenceCategory
         android:title="General">
-
         <EditTextPreference
             android:defaultValue="30"
-            android:key="volume_muted_timeout"
+            android:inputType="numberDecimal"
+            android:key="@string/pref_key_volume_muted_timeout"
             android:selectAllOnFocus="true"
             android:singleLine="true"
-            android:summary="Amount of seconds for which the volume is muted."
-            android:title="Muted volume timeout"/>
+            android:summary="@string/pref_volume_muted_timeout_summary"
+            android:title="@string/pref_volume_muted_timeout_title"/>
     </PreferenceCategory>
 
     <PreferenceCategory
         android:title="Small notification">
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="@string/pref_key_small_show_music_mute"
+            android:summary="@string/pref_small_show_music_mute_summary"
+            android:title="@string/pref_small_show_music_mute_title"/>
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="@string/pref_key_small_show_ring_mute"
+            android:summary="@string/pref_small_show_ring_mute_summary"
+            android:title="@string/pref_small_show_ring_mute_title"/>
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="@string/pref_key_small_show_notifications_mute"
+            android:summary="@string/pref_small_show_notifications_mute_summary"
+            android:title="@string/pref_small_show_notifications_mute_title"/>
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="@string/pref_key_small_show_volume_updown"
+            android:summary="@string/pref_small_show_volume_updown_summary"
+            android:title="@string/pref_small_show_volume_updown_title"/>
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="@string/pref_key_small_show_volume_mute_with_timeout"
+            android:summary="@string/pref_small_show_volume_mute_with_timeout_summary"
+            android:title="@string/pref_small_show_volume_mute_with_timeout_title"/>
+    </PreferenceCategory>
 
+    <PreferenceCategory
+        android:title="Expanded notification">
         <SwitchPreference
             android:defaultValue="true"
-            android:key="small_show_volume_updown"
-            android:summary="Show music volume up/down slider."
-            android:title="Music volume slider"/>
+            android:key="@string/pref_key_big_enabled"
+            android:summary="@string/pref_big_enabled_summary"
+            android:title="@string/pref_big_enabled_title"/>
         <SwitchPreference
             android:defaultValue="true"
-            android:key="small_show_volume_mute_with_timeout"
-            android:summary='Show "Mute music with timeout" button.'
-            android:title="Mute music with timeout"/>
+            android:key="@string/pref_key_big_show_music_volume"
+            android:summary="@string/pref_big_show_music_volume_summary"
+            android:title="@string/pref_big_show_music_volume_title"
+            />
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="@string/pref_key_big_show_ring_volume"
+            android:summary="@string/pref_big_show_ring_volume_summary"
+            android:title="@string/pref_big_show_ring_volume_title"
+            />
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="@string/pref_key_big_show_notifications_volume"
+            android:summary="@string/pref_big_show_notifications_volume_summary"
+            android:title="@string/pref_big_show_notifications_volume_title"
+            />
     </PreferenceCategory>
 
 </PreferenceScreen>

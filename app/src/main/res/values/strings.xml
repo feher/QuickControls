@@ -1,4 +1,45 @@
 <resources>
-    <string name="app_name">Quick Controls</string>
-    <string name="quick_controls_title">Quick Controls</string>
+    <string name="app_name">Quick volume controls</string>
+    <string name="quick_controls_title">Quick volume controls</string>
+
+    <string name="pref_key_volume_muted_timeout" translatable="false">volume_muted_timeout</string>
+    <string name="pref_volume_muted_timeout_summary">Amount of seconds for which the volume is muted.</string>
+    <string name="pref_volume_muted_timeout_title">Muted volume timeout</string>
+
+    <string name="pref_key_small_show_music_mute" translatable="false">small_show_music_mute</string>
+    <string name="pref_small_show_music_mute_summary">Show music mute button.</string>
+    <string name="pref_small_show_music_mute_title">Music button</string>
+
+    <string name="pref_key_small_show_ring_mute" translatable="false">small_show_ring_mute</string>
+    <string name="pref_small_show_ring_mute_summary">Show ring mute button.</string>
+    <string name="pref_small_show_ring_mute_title">Ringing button</string>
+
+    <string name="pref_key_small_show_notifications_mute" translatable="false">small_show_notifications_mute</string>
+    <string name="pref_small_show_notifications_mute_summary">Show notifications mute button.</string>
+    <string name="pref_small_show_notifications_mute_title">Notifications button"</string>
+
+    <string name="pref_key_small_show_volume_updown" translatable="false">small_show_volume_updown</string>
+    <string name="pref_small_show_volume_updown_summary">Show music volume up/down slider.</string>
+    <string name="pref_small_show_volume_updown_title">Music volume slider</string>
+
+    <string name="pref_key_small_show_volume_mute_with_timeout" translatable="false">small_show_volume_mute_with_timeout</string>
+    <string name="pref_small_show_volume_mute_with_timeout_summary">Show \"Mute music with timeout\" button.</string>
+    <string name="pref_small_show_volume_mute_with_timeout_title">Mute music with timeout</string>
+
+    <string name="pref_key_big_enabled" translatable="false">big_enabled</string>
+    <string name="pref_big_enabled_summary">Enable expanded notification.</string>
+    <string name="pref_big_enabled_title">Enable</string>
+
+    <string name="pref_key_big_show_music_volume" translatable="false">big_show_music_volume</string>
+    <string name="pref_big_show_music_volume_summary">Show music volume controls.</string>
+    <string name="pref_big_show_music_volume_title">Music volume</string>
+
+    <string name="pref_key_big_show_ring_volume" translatable="false">big_show_ring_volume</string>
+    <string name="pref_big_show_ring_volume_summary">Show ring volume controls.</string>
+    <string name="pref_big_show_ring_volume_title">Ringing volume</string>
+
+    <string name="pref_key_big_show_notifications_volume" translatable="false">big_show_notifications_volume</string>
+    <string name="pref_big_show_notifications_volume_summary">Show notifications volume controls.</string>
+    <string name="pref_big_show_notifications_volume_title">Notifications volume</string>
+
 </resources>

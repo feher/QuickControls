@@ -7,12 +7,14 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.ContentObserver;
 import android.media.AudioManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.SystemClock;
+import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.support.annotation.DrawableRes;
 import android.support.annotation.IdRes;
@@ -28,6 +30,7 @@ import hugo.weaving.DebugLog;
 
 public class QuickControlsService extends Service {
 
+    public static String ACTION_UPDATE_NOTIFICATION = QuickControlsService.class.getSimpleName() + ".ACTION_UPDATE_NOTIFICATION";
     public static String ACTION_TOGGLE_VOLUME = QuickControlsService.class.getSimpleName() + ".ACTION_TOGGLE_VOLUME";
     public static String ACTION_TOGGLE_VOLUME_WITH_TIMEOUT = QuickControlsService.class.getSimpleName() + ".ACTION_TOGGLE_VOLUME_WITH_TIMEOUT";
     public static String ACTION_UNMUTE_VOLUME = QuickControlsService.class.getSimpleName() + ".ACTION_UNMUTE_VOLUME";
@@ -35,8 +38,6 @@ public class QuickControlsService extends Service {
     public static String ACTION_VOLUME_DOWN = QuickControlsService.class.getSimpleName() + ".ACTION_VOLUME_DOWN";
 
     public static String EXTRA_SOUND_STREAM = QuickControlsService.class.getSimpleName() + ".EXTRA_SOUND_STREAM";
-
-    private static final int DEFAULT_VOLUME_MUTE_TIMEOUT = 30; // seconds
 
     private static final int ONGOING_NOTIFICATION_ID = 111;
 
@@ -54,6 +55,7 @@ public class QuickControlsService extends Service {
     private NotificationManager mNotificationManager;
     private AudioManager mAudioManager;
     private AlarmManager mAlarmManager;
+    private SharedPreferences mPreferences;
 
     private static class VolumeInfo {
         public int stream;
@@ -66,9 +68,12 @@ public class QuickControlsService extends Service {
         public @IdRes int muteVolumeWithTimeoutId;
         public @IdRes int muteVolumeWithTimeoutPrimaryIconId;
         public @IdRes int muteVolumeWithTimeoutSecondaryIconId;
+        public @IdRes int volumeLevelLayoutId;
         public @IdRes int volumeLevelBarId;
-        public @IdRes int volumeMutedTimeoutBarId;
         public @IdRes int volumeLevelTextId;
+        public @IdRes int volumeMutedTimeoutLayoutId;
+        public @IdRes int volumeMutedTimeoutBarId;
+        public @IdRes int volumeMutedTimeoutTextId;
         public PendingIntent unmuteVolumeWithTimeoutIntent;
         public int remainingVolumeMutedSeconds;
         public Runnable periodicNotificationUpdate;
@@ -76,7 +81,8 @@ public class QuickControlsService extends Service {
                           @IdRes int volumeUpId, @IdRes int volumeDownId,
                           @IdRes int muteVolumeId, @DrawableRes int volumeOnIconId, @DrawableRes int volumeOffIconId,
                           @IdRes int muteVolumeWithTimeoutId, @IdRes int muteVolumeWithTimeoutPrimaryIconId, @IdRes int muteVolumeWithTimeoutSecondaryIconId,
-                          @IdRes int volumeLevelBarId, @IdRes int volumeMutedTimeoutBarId, @IdRes int volumeLevelTextId) {
+                          @IdRes int volumeLevelLayoutId, @IdRes int volumeLevelBarId, @IdRes int volumeLevelTextId,
+                          @IdRes int volumeMutedTimeoutLayoutId, @IdRes int volumeMutedTimeoutBarId, @IdRes int volumeMutedTimeoutTextId) {
             this.stream = stream;
             this.requestCodeOffset = requestCodeOffset;
             this.volumeUpId = volumeUpId;
@@ -87,9 +93,12 @@ public class QuickControlsService extends Service {
             this.muteVolumeWithTimeoutId = muteVolumeWithTimeoutId;
             this.muteVolumeWithTimeoutPrimaryIconId = muteVolumeWithTimeoutPrimaryIconId;
             this.muteVolumeWithTimeoutSecondaryIconId = muteVolumeWithTimeoutSecondaryIconId;
+            this.volumeLevelLayoutId = volumeLevelLayoutId;
             this.volumeLevelBarId = volumeLevelBarId;
-            this.volumeMutedTimeoutBarId = volumeMutedTimeoutBarId;
             this.volumeLevelTextId = volumeLevelTextId;
+            this.volumeMutedTimeoutLayoutId = volumeMutedTimeoutLayoutId;
+            this.volumeMutedTimeoutBarId = volumeMutedTimeoutBarId;
+            this.volumeMutedTimeoutTextId = volumeMutedTimeoutTextId;
         }
     }
 
@@ -111,9 +120,13 @@ public class QuickControlsService extends Service {
                         R.id.music_volume_mute_with_timeout_button,
                         R.id.music_volume_mute_with_timeout_primary_icon,
                         R.id.music_volume_mute_with_timeout_secondary_icon,
+                        R.id.music_volume_level_layout,
                         R.id.music_volume_level_bar,
+                        R.id.music_volume_level_text,
+                        R.id.music_volume_muted_timeout_layout,
                         R.id.music_volume_muted_timeout_bar,
-                        R.id.music_volume_level_text));
+                        R.id.music_volume_muted_timeout_text
+                ));
         mVolumeInfos.put(
                 AudioManager.STREAM_RING,
                 new VolumeInfo(
@@ -127,9 +140,13 @@ public class QuickControlsService extends Service {
                         R.id.ring_volume_mute_with_timeout_button,
                         R.id.ring_volume_mute_with_timeout_primary_icon,
                         R.id.ring_volume_mute_with_timeout_secondary_icon,
+                        R.id.ring_volume_level_layout,
                         R.id.ring_volume_level_bar,
+                        R.id.ring_volume_level_text,
+                        R.id.ring_volume_muted_timeout_layout,
                         R.id.ring_volume_muted_timeout_bar,
-                        R.id.ring_volume_level_text));
+                        R.id.ring_volume_muted_timeout_text
+                ));
         mVolumeInfos.put(
                 AudioManager.STREAM_NOTIFICATION,
                 new VolumeInfo(
@@ -143,9 +160,13 @@ public class QuickControlsService extends Service {
                         R.id.notifications_volume_mute_with_timeout_button,
                         R.id.notifications_volume_mute_with_timeout_primary_icon,
                         R.id.notifications_volume_mute_with_timeout_secondary_icon,
+                        R.id.notifications_volume_level_layout,
                         R.id.notifications_volume_level_bar,
+                        R.id.notifications_volume_level_text,
+                        R.id.notifications_volume_muted_timeout_layout,
                         R.id.notifications_volume_muted_timeout_bar,
-                        R.id.notifications_volume_level_text));
+                        R.id.notifications_volume_muted_timeout_text
+                ));
     }
 
     static {
@@ -172,6 +193,10 @@ public class QuickControlsService extends Service {
         mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         mAlarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+
+        PreferenceManager.setDefaultValues(getApplicationContext(), R.xml.preferences, false);
+        mPreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+
         getContentResolver().registerContentObserver(Settings.System.CONTENT_URI, true, mVolumeObserver);
     }
 
@@ -184,7 +209,9 @@ public class QuickControlsService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null) {
-            if (ACTION_TOGGLE_VOLUME.equals(intent.getAction())) {
+            if (ACTION_UPDATE_NOTIFICATION.equals(intent.getAction())) {
+                updateNotification();
+            } else if (ACTION_TOGGLE_VOLUME.equals(intent.getAction())) {
                 commandToggleVolume(intent.getIntExtra(EXTRA_SOUND_STREAM, AudioManager.STREAM_MUSIC));
             } else if (ACTION_TOGGLE_VOLUME_WITH_TIMEOUT.equals(intent.getAction())) {
                 commandToggleVolumeWithTimeout(intent.getIntExtra(EXTRA_SOUND_STREAM, AudioManager.STREAM_MUSIC));
@@ -212,12 +239,14 @@ public class QuickControlsService extends Service {
     }
 
     private Notification createNotification() {
-        return new NotificationCompat.Builder(this)
-                .setCustomContentView(createSmallRemoteViews())
-                .setCustomBigContentView(createBigRemoteViews())
-                .setSmallIcon(R.drawable.ic_small_icon)
-                .setPriority(NotificationCompat.PRIORITY_MAX)
-                .build();
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
+        builder.setCustomContentView(createSmallRemoteViews());
+        if (mPreferences.getBoolean(getString(R.string.pref_key_big_enabled), true)) {
+            builder.setCustomBigContentView(createBigRemoteViews());
+        }
+        builder.setSmallIcon(R.drawable.ic_small_icon);
+        builder.setPriority(NotificationCompat.PRIORITY_MAX);
+        return builder.build();
     }
 
     private RemoteViews createSmallRemoteViews() {
@@ -227,42 +256,78 @@ public class QuickControlsService extends Service {
     }
 
     private void initSmallRemoteViews(RemoteViews remoteViews) {
-        initToggleVolumeButton(
-                remoteViews,
-                REQUEST_CODE_OFFSET_SMALL + 1,
-                AudioManager.STREAM_MUSIC,
-                R.id.music_volume_icon, R.drawable.ic_music_volume_on, R.drawable.ic_music_volume_off);
+        if (mPreferences.getBoolean(getString(R.string.pref_key_small_show_music_mute), true)) {
+            remoteViews.setViewVisibility(R.id.music_volume_icon, View.VISIBLE);
+            initToggleVolumeButton(
+                    remoteViews,
+                    REQUEST_CODE_OFFSET_SMALL + 1,
+                    AudioManager.STREAM_MUSIC,
+                    R.id.music_volume_icon, R.drawable.ic_music_volume_on, R.drawable.ic_music_volume_off);
+        } else {
+            remoteViews.setViewVisibility(R.id.music_volume_icon, View.GONE);
+        }
 
-        initToggleVolumeButton(
-                remoteViews,
-                REQUEST_CODE_OFFSET_SMALL + 2,
-                AudioManager.STREAM_RING,
-                R.id.ring_volume_icon, R.drawable.ic_ring_volume_on, R.drawable.ic_ring_volume_off);
+        if (mPreferences.getBoolean(getString(R.string.pref_key_small_show_ring_mute), true)) {
+            remoteViews.setViewVisibility(R.id.ring_volume_icon, View.VISIBLE);
+            initToggleVolumeButton(
+                    remoteViews,
+                    REQUEST_CODE_OFFSET_SMALL + 2,
+                    AudioManager.STREAM_RING,
+                    R.id.ring_volume_icon, R.drawable.ic_ring_volume_on, R.drawable.ic_ring_volume_off);
+        } else {
+            remoteViews.setViewVisibility(R.id.ring_volume_icon, View.GONE);
+        }
 
-        initToggleVolumeButton(
-                remoteViews,
-                REQUEST_CODE_OFFSET_SMALL + 3,
-                AudioManager.STREAM_NOTIFICATION,
-                R.id.notifications_volume_icon, R.drawable.ic_notifications_volume_on, R.drawable.ic_notifications_volume_off);
+        if (mPreferences.getBoolean(getString(R.string.pref_key_small_show_notifications_mute), true)) {
+            remoteViews.setViewVisibility(R.id.notifications_volume_icon, View.VISIBLE);
+            initToggleVolumeButton(
+                    remoteViews,
+                    REQUEST_CODE_OFFSET_SMALL + 3,
+                    AudioManager.STREAM_NOTIFICATION,
+                    R.id.notifications_volume_icon, R.drawable.ic_notifications_volume_on, R.drawable.ic_notifications_volume_off);
+        } else {
+            remoteViews.setViewVisibility(R.id.notifications_volume_icon, View.GONE);
+        }
 
         final VolumeInfo volumeInfo = mVolumeInfos.get(AudioManager.STREAM_MUSIC);
 
-        initVolumeDownButton(remoteViews, REQUEST_CODE_OFFSET_SMALL + 4, volumeInfo.stream, R.id.volume_down_button);
+        if (mPreferences.getBoolean(getString(R.string.pref_key_small_show_volume_updown), true)) {
+            remoteViews.setViewVisibility(R.id.volume_down_button, View.VISIBLE);
+            remoteViews.setViewVisibility(R.id.volume_up_button, View.VISIBLE);
+            remoteViews.setViewVisibility(R.id.volume_level_bar, View.VISIBLE);
+            remoteViews.setViewVisibility(R.id.volume_level_text, View.VISIBLE);
+            initVolumeDownButton(remoteViews, REQUEST_CODE_OFFSET_SMALL + 4, volumeInfo.stream, R.id.volume_down_button);
+            initVolumeUpButton(remoteViews, REQUEST_CODE_OFFSET_SMALL + 5, volumeInfo.stream, R.id.volume_up_button);
+            initVolumeLevelBar(
+                    remoteViews, volumeInfo.stream, volumeInfo.remainingVolumeMutedSeconds,
+                    R.id.volume_level_layout, R.id.volume_level_bar, R.id.volume_level_text);
+        } else {
+            remoteViews.setViewVisibility(R.id.volume_down_button, View.GONE);
+            remoteViews.setViewVisibility(R.id.volume_up_button, View.GONE);
+            remoteViews.setViewVisibility(R.id.volume_level_bar, View.GONE);
+            remoteViews.setViewVisibility(R.id.volume_level_text, View.GONE);
+        }
 
-        initVolumeUpButton(remoteViews, REQUEST_CODE_OFFSET_SMALL + 5, volumeInfo.stream, R.id.volume_up_button);
-
-        initToggleVolumeWithTimeoutButton(
-                remoteViews,
-                REQUEST_CODE_OFFSET_SMALL + 6,
-                volumeInfo.stream,
-                volumeInfo.remainingVolumeMutedSeconds,
-                R.id.volume_muted_with_timeout_button,
-                R.id.volume_muted_with_timeout_primary_icon,
-                R.id.volume_muted_with_timeout_secondary_icon);
-
-        initProgressBars(
-                remoteViews, volumeInfo.stream, volumeInfo.remainingVolumeMutedSeconds,
-                R.id.volume_level_bar, R.id.volume_muted_timeout_bar, R.id.volume_level_text, "s");
+        if (mPreferences.getBoolean(getString(R.string.pref_key_small_show_volume_mute_with_timeout), true)) {
+            remoteViews.setViewVisibility(R.id.volume_muted_with_timeout_button, View.VISIBLE);
+            remoteViews.setViewVisibility(R.id.volume_muted_timeout_bar, View.VISIBLE);
+            remoteViews.setViewVisibility(R.id.volume_muted_timeout_text, View.VISIBLE);
+            initToggleVolumeWithTimeoutButton(
+                    remoteViews,
+                    REQUEST_CODE_OFFSET_SMALL + 6,
+                    volumeInfo.stream,
+                    volumeInfo.remainingVolumeMutedSeconds,
+                    R.id.volume_muted_with_timeout_button,
+                    R.id.volume_muted_with_timeout_primary_icon,
+                    R.id.volume_muted_with_timeout_secondary_icon);
+            initVolumeMutedTimeoutBar(
+                    remoteViews, volumeInfo.remainingVolumeMutedSeconds,
+                    R.id.volume_muted_timeout_layout, R.id.volume_muted_timeout_bar, R.id.volume_muted_timeout_text, "s");
+        } else {
+            remoteViews.setViewVisibility(R.id.volume_muted_with_timeout_button, View.GONE);
+            remoteViews.setViewVisibility(R.id.volume_muted_timeout_bar, View.GONE);
+            remoteViews.setViewVisibility(R.id.volume_muted_timeout_text, View.GONE);
+        }
     }
 
     private void initBigRemoteViewsPart(RemoteViews remoteViews, int stream) {
@@ -289,9 +354,20 @@ public class QuickControlsService extends Service {
                 volumeInfo.muteVolumeWithTimeoutPrimaryIconId,
                 volumeInfo.muteVolumeWithTimeoutSecondaryIconId);
 
-        initProgressBars(
-                remoteViews, volumeInfo.stream, volumeInfo.remainingVolumeMutedSeconds,
-                volumeInfo.volumeLevelBarId, volumeInfo.volumeMutedTimeoutBarId, volumeInfo.volumeLevelTextId, "s");
+        initVolumeLevelBar(
+                remoteViews,
+                volumeInfo.stream,
+                volumeInfo.remainingVolumeMutedSeconds,
+                volumeInfo.volumeLevelLayoutId,
+                volumeInfo.volumeLevelBarId,
+                volumeInfo.volumeLevelTextId);
+        initVolumeMutedTimeoutBar(
+                remoteViews,
+                volumeInfo.remainingVolumeMutedSeconds,
+                volumeInfo.volumeMutedTimeoutLayoutId,
+                volumeInfo.volumeMutedTimeoutBarId,
+                volumeInfo.volumeMutedTimeoutTextId,
+                "s");
     }
 
     private void initToggleVolumeButton(RemoteViews remoteViews, int requestCode, int stream,
@@ -338,31 +414,62 @@ public class QuickControlsService extends Service {
                 (remainingVolumeMutedSeconds == 0) ? R.drawable.ic_volume_timer_off : R.drawable.ic_volume_timer_on);
     }
 
-    private void initProgressBars(RemoteViews remoteViews, int stream, int remainingVolumeMutedSeconds,
-                                  @IdRes int volumeLevelBarId, @IdRes int volumeMutedTimeoutBarId, @IdRes int volumeLevelTextId,
-                                  String secondsPostfix) {
+    private void initVolumeLevelBar(RemoteViews remoteViews,
+                                    int stream,
+                                    int remainingVolumeMutedSeconds,
+                                    @IdRes int volumeLevelLayoutId,
+                                    @IdRes int volumeLevelBarId,
+                                    @IdRes int volumeLevelTextId) {
         if (remainingVolumeMutedSeconds == 0) {
-            remoteViews.setViewVisibility(volumeLevelBarId, View.VISIBLE);
+            remoteViews.setViewVisibility(volumeLevelLayoutId, View.VISIBLE);
             remoteViews.setProgressBar(volumeLevelBarId, 100, getVolumeLevel(stream), false);
             remoteViews.setTextViewText(volumeLevelTextId, getVolumeLevel(stream) + "%");
             remoteViews.setTextColor(volumeLevelTextId, ResourcesCompat.getColor(getResources(), R.color.notification_icon, null));
-            remoteViews.setViewVisibility(volumeMutedTimeoutBarId, View.INVISIBLE);
         } else {
-            remoteViews.setViewVisibility(volumeLevelBarId, View.INVISIBLE);
-            remoteViews.setViewVisibility(volumeMutedTimeoutBarId, View.VISIBLE);
-            int timeoutBarValue = Math.round(100 - remainingVolumeMutedSeconds * 100.0f / DEFAULT_VOLUME_MUTE_TIMEOUT);
-            remoteViews.setProgressBar(volumeMutedTimeoutBarId, 100, timeoutBarValue, false);
-            remoteViews.setViewVisibility(volumeLevelTextId, View.VISIBLE);
-            remoteViews.setTextViewText(volumeLevelTextId, remainingVolumeMutedSeconds + secondsPostfix);
-            remoteViews.setTextColor(volumeLevelTextId, ResourcesCompat.getColor(getResources(), R.color.notification_mute_timeout_bar, null));
+            remoteViews.setViewVisibility(volumeLevelLayoutId, View.GONE);
+        }
+    }
+
+    private void initVolumeMutedTimeoutBar(RemoteViews remoteViews,
+                                           int remainingVolumeMutedSeconds,
+                                           @IdRes int timeoutLayoutId,
+                                           @IdRes int timeoutBarId,
+                                           @IdRes int timeoutTextId,
+                                           String secondsPostfix) {
+        if (remainingVolumeMutedSeconds == 0) {
+            remoteViews.setViewVisibility(timeoutLayoutId, View.GONE);
+        } else {
+            remoteViews.setViewVisibility(timeoutLayoutId, View.VISIBLE);
+            int timeoutBarValue = Math.round(100 - remainingVolumeMutedSeconds * 100.0f / getMutedVolumeTimeout());
+            remoteViews.setProgressBar(timeoutBarId, 100, timeoutBarValue, false);
+            remoteViews.setTextViewText(timeoutTextId, remainingVolumeMutedSeconds + secondsPostfix);
+            remoteViews.setTextColor(timeoutTextId, ResourcesCompat.getColor(getResources(), R.color.notification_mute_timeout_bar, null));
         }
     }
 
     private RemoteViews createBigRemoteViews() {
         RemoteViews remoteViews = new RemoteViews(getPackageName(), R.layout.quick_controls_large);
-        initBigRemoteViewsPart(remoteViews, AudioManager.STREAM_MUSIC);
-        initBigRemoteViewsPart(remoteViews, AudioManager.STREAM_RING);
-        initBigRemoteViewsPart(remoteViews, AudioManager.STREAM_NOTIFICATION);
+        if (mPreferences.getBoolean(getString(R.string.pref_key_big_show_music_volume), true)) {
+            remoteViews.setViewVisibility(R.id.music_volume_controls_layout, View.VISIBLE);
+            initBigRemoteViewsPart(remoteViews, AudioManager.STREAM_MUSIC);
+        } else {
+            remoteViews.setViewVisibility(R.id.music_volume_controls_layout, View.GONE);
+        }
+
+        if (mPreferences.getBoolean(getString(R.string.pref_key_big_show_ring_volume), true)) {
+            remoteViews.setViewVisibility(R.id.ring_volume_controls_layout, View.VISIBLE);
+            initBigRemoteViewsPart(remoteViews, AudioManager.STREAM_RING);
+        } else {
+            remoteViews.setViewVisibility(R.id.ring_volume_controls_layout, View.GONE);
+        }
+
+        if (mPreferences.getBoolean(getString(R.string.pref_key_big_show_notifications_volume), true)) {
+            remoteViews.setViewVisibility(R.id.notifications_volume_controls_layout, View.VISIBLE);
+            initBigRemoteViewsPart(remoteViews, AudioManager.STREAM_NOTIFICATION);
+        } else {
+            remoteViews.setViewVisibility(R.id.notifications_volume_controls_layout, View.GONE);
+        }
+
         return remoteViews;
     }
 
@@ -387,7 +494,7 @@ public class QuickControlsService extends Service {
         } else {
             muteVolume(stream);
 
-            mVolumeInfos.get(stream).remainingVolumeMutedSeconds = DEFAULT_VOLUME_MUTE_TIMEOUT;
+            mVolumeInfos.get(stream).remainingVolumeMutedSeconds = getMutedVolumeTimeout();
 
             Intent unmuteIntent = new Intent(this, UnmuteMusicWithTimeoutReceiver.class);
             unmuteIntent.putExtra(QuickControlsService.EXTRA_SOUND_STREAM, stream);
@@ -491,6 +598,11 @@ public class QuickControlsService extends Service {
         int maxVolume = mAudioManager.getStreamMaxVolume(stream);
         int volume = mAudioManager.getStreamVolume(stream);
         return Math.round(volume * 100.0f / maxVolume);
+    }
+
+    private int getMutedVolumeTimeout() {
+        String timeoutString = mPreferences.getString(getString(R.string.pref_key_volume_muted_timeout), "30");
+        return Integer.valueOf(timeoutString);
     }
 
 }

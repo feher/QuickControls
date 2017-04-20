@@ -2,6 +2,7 @@
 <RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/ring_volume_controls_layout"
     android:layout_width="match_parent"
     android:layout_height="70dp"
     android:paddingLeft="5dp"
@@ -17,6 +18,7 @@
         android:layout_alignParentLeft="true"
         android:layout_marginLeft="@dimen/notification_icon_margin"
         android:layout_marginRight="@dimen/notification_icon_margin"
+        android:layout_centerVertical="true"
         android:src="@drawable/ic_ring_volume_on"
         android:visibility="visible"
         />
@@ -27,6 +29,7 @@
         android:layout_height="@dimen/notification_icon_size"
         android:layout_alignParentRight="true"
         android:layout_marginRight="@dimen/notification_icon_margin"
+        android:layout_centerVertical="true"
         >
 
         <ImageView
@@ -48,73 +51,97 @@
             />
     </FrameLayout>
 
-    <ProgressBar
-        android:id="@+id/ring_volume_level_bar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignTop="@id/ring_volume_icon"
-        android:layout_alignBottom="@id/ring_volume_icon"
+    <LinearLayout
+        android:id="@+id/ring_volume_muted_timeout_layout"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:layout_centerVertical="true"
         android:layout_toLeftOf="@id/ring_volume_mute_with_timeout_button"
         android:layout_toRightOf="@id/ring_volume_icon"
-        android:layout_marginRight="@dimen/notification_volume_bar_margin"
-        android:progress="50"
-        android:visibility="visible"
-        android:gravity="center"
-        style="@style/Widget.AppCompat.ProgressBar.Horizontal"
-        android:progressTint="@color/notification_volume_bar"
-        android:progressBackgroundTint="@color/notification_volume_bar_background"
-        />
+        >
+        <ProgressBar
+            android:id="@+id/ring_volume_muted_timeout_bar"
+            android:layout_width="0dp"
+            android:layout_weight="2"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:gravity="center"
+            android:progress="50"
+            android:visibility="visible"
+            style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+            android:progressTint="@color/notification_mute_timeout_bar"
+            android:progressBackgroundTint="@color/notification_mute_timeout_bar_background"
+            />
+        <TextView
+            android:id="@+id/ring_volume_muted_timeout_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="5dp"
+            android:layout_marginLeft="5dp"
+            android:layout_gravity="center_vertical"
+            android:gravity="center"
+            android:textColor="@color/notification_icon"
+            android:textSize="10sp"
+            android:visibility="visible"
+            tools:text="100%"
+            />
+    </LinearLayout>
 
-    <ProgressBar
-        android:id="@+id/ring_volume_muted_timeout_bar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignTop="@id/ring_volume_icon"
-        android:layout_alignBottom="@id/ring_volume_icon"
+    <LinearLayout
+        android:id="@+id/ring_volume_level_layout"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:layout_centerVertical="true"
         android:layout_toLeftOf="@id/ring_volume_mute_with_timeout_button"
         android:layout_toRightOf="@id/ring_volume_icon"
-        android:layout_marginRight="@dimen/notification_volume_bar_margin"
-        android:progress="50"
-        android:visibility="visible"
-        android:gravity="center"
-        style="@style/Widget.AppCompat.ProgressBar.Horizontal"
-        android:progressTint="@color/notification_mute_timeout_bar"
-        android:progressBackgroundTint="@color/notification_mute_timeout_bar_background"
-        />
-
-    <TextView
-        android:id="@+id/ring_volume_level_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_toLeftOf="@id/ring_volume_mute_with_timeout_button"
-        android:layout_alignTop="@id/ring_volume_level_bar"
-        android:layout_alignBottom="@id/ring_volume_level_bar"
-        android:layout_marginRight="@dimen/notification_volume_level_text_margin"
-        android:layout_marginLeft="5dp"
-        android:gravity="center"
-        android:textColor="@color/notification_icon"
-        android:textSize="10sp"
-        android:visibility="visible"
-        tools:text="100%"
-        />
+        >
+        <ProgressBar
+            android:id="@+id/ring_volume_level_bar"
+            android:layout_width="0dp"
+            android:layout_weight="2"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:gravity="center"
+            android:progress="50"
+            android:visibility="visible"
+            style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+            android:progressTint="@color/notification_volume_bar"
+            android:progressBackgroundTint="@color/notification_mute_timeout_bar_background"
+            />
+        <TextView
+            android:id="@+id/ring_volume_level_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="5dp"
+            android:layout_marginLeft="5dp"
+            android:layout_gravity="center_vertical"
+            android:gravity="center"
+            android:textColor="@color/notification_icon"
+            android:textSize="10sp"
+            android:visibility="visible"
+            tools:text="100%"
+            />
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignLeft="@id/ring_volume_level_bar"
-        android:layout_alignRight="@id/ring_volume_level_bar"
+        android:layout_height="match_parent"
+        android:layout_alignLeft="@id/ring_volume_level_layout"
+        android:layout_alignRight="@id/ring_volume_level_layout"
         >
         <ImageView
             android:id="@+id/ring_volume_down_button"
             android:layout_width="0dp"
-            android:layout_height="@dimen/notification_icon_size"
+            android:layout_height="match_parent"
             android:layout_weight="1"
             android:visibility="visible"
             />
         <ImageView
             android:id="@+id/ring_volume_up_button"
             android:layout_width="0dp"
-            android:layout_height="@dimen/notification_icon_size"
+            android:layout_height="match_parent"
             android:layout_weight="1"
             android:visibility="visible"
             />
