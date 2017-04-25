@@ -38,6 +38,7 @@ public class QuickControlsService extends Service {
     public static String ACTION_VOLUME_DOWN = QuickControlsService.class.getSimpleName() + ".ACTION_VOLUME_DOWN";
 
     public static String EXTRA_SOUND_STREAM = QuickControlsService.class.getSimpleName() + ".EXTRA_SOUND_STREAM";
+    public static String EXTRA_TIMEOUT_SECONDS = QuickControlsService.class.getSimpleName() + ".EXTRA_TIMEOUT_SECONDS";
 
     private static final int ONGOING_NOTIFICATION_ID = 111;
 
@@ -75,6 +76,7 @@ public class QuickControlsService extends Service {
         public @IdRes int volumeMutedTimeoutBarId;
         public @IdRes int volumeMutedTimeoutTextId;
         public PendingIntent unmuteVolumeWithTimeoutIntent;
+        public int volumeMutedSeconds;
         public int remainingVolumeMutedSeconds;
         public Runnable periodicNotificationUpdate;
         public VolumeInfo(int stream, int requestCodeOffset,
@@ -214,7 +216,9 @@ public class QuickControlsService extends Service {
             } else if (ACTION_TOGGLE_VOLUME.equals(intent.getAction())) {
                 commandToggleVolume(intent.getIntExtra(EXTRA_SOUND_STREAM, AudioManager.STREAM_MUSIC));
             } else if (ACTION_TOGGLE_VOLUME_WITH_TIMEOUT.equals(intent.getAction())) {
-                commandToggleVolumeWithTimeout(intent.getIntExtra(EXTRA_SOUND_STREAM, AudioManager.STREAM_MUSIC));
+                commandToggleVolumeWithTimeout(
+                        intent.getIntExtra(EXTRA_SOUND_STREAM, AudioManager.STREAM_MUSIC),
+                        intent.getIntExtra(EXTRA_TIMEOUT_SECONDS, -1));
             } else if (ACTION_UNMUTE_VOLUME.equals(intent.getAction())) {
                 commandUnmuteVolume(intent.getIntExtra(EXTRA_SOUND_STREAM, AudioManager.STREAM_MUSIC));
             } else if (ACTION_VOLUME_UP.equals(intent.getAction())) {
@@ -321,8 +325,13 @@ public class QuickControlsService extends Service {
                     R.id.volume_muted_with_timeout_primary_icon,
                     R.id.volume_muted_with_timeout_secondary_icon);
             initVolumeMutedTimeoutBar(
-                    remoteViews, volumeInfo.remainingVolumeMutedSeconds,
-                    R.id.volume_muted_timeout_layout, R.id.volume_muted_timeout_bar, R.id.volume_muted_timeout_text, "s");
+                    remoteViews,
+                    volumeInfo.volumeMutedSeconds,
+                    volumeInfo.remainingVolumeMutedSeconds,
+                    R.id.volume_muted_timeout_layout,
+                    R.id.volume_muted_timeout_bar,
+                    R.id.volume_muted_timeout_text,
+                    "s");
         } else {
             remoteViews.setViewVisibility(R.id.volume_muted_with_timeout_button, View.GONE);
             remoteViews.setViewVisibility(R.id.volume_muted_timeout_bar, View.GONE);
@@ -363,6 +372,7 @@ public class QuickControlsService extends Service {
                 volumeInfo.volumeLevelTextId);
         initVolumeMutedTimeoutBar(
                 remoteViews,
+                volumeInfo.volumeMutedSeconds,
                 volumeInfo.remainingVolumeMutedSeconds,
                 volumeInfo.volumeMutedTimeoutLayoutId,
                 volumeInfo.volumeMutedTimeoutBarId,
@@ -403,6 +413,7 @@ public class QuickControlsService extends Service {
         Intent intent = new Intent(this, QuickControlsService.class);
         intent.setAction(ACTION_TOGGLE_VOLUME_WITH_TIMEOUT);
         intent.putExtra(EXTRA_SOUND_STREAM, stream);
+        intent.putExtra(EXTRA_TIMEOUT_SECONDS, getMutedVolumeTimeout());
         remoteViews.setOnClickPendingIntent(
                 viewId,
                 PendingIntent.getService(this, requestCode, intent, PendingIntent.FLAG_CANCEL_CURRENT));
@@ -431,6 +442,7 @@ public class QuickControlsService extends Service {
     }
 
     private void initVolumeMutedTimeoutBar(RemoteViews remoteViews,
+                                           int volumeMutedSeconds,
                                            int remainingVolumeMutedSeconds,
                                            @IdRes int timeoutLayoutId,
                                            @IdRes int timeoutBarId,
@@ -440,7 +452,7 @@ public class QuickControlsService extends Service {
             remoteViews.setViewVisibility(timeoutLayoutId, View.GONE);
         } else {
             remoteViews.setViewVisibility(timeoutLayoutId, View.VISIBLE);
-            int timeoutBarValue = Math.round(100 - remainingVolumeMutedSeconds * 100.0f / getMutedVolumeTimeout());
+            int timeoutBarValue = Math.round(100 - remainingVolumeMutedSeconds * 100.0f / volumeMutedSeconds);
             remoteViews.setProgressBar(timeoutBarId, 100, timeoutBarValue, false);
             remoteViews.setTextViewText(timeoutTextId, remainingVolumeMutedSeconds + secondsPostfix);
             remoteViews.setTextColor(timeoutTextId, ResourcesCompat.getColor(getResources(), R.color.notification_mute_timeout_bar, null));
@@ -488,22 +500,28 @@ public class QuickControlsService extends Service {
     }
 
     @DebugLog
-    private void commandToggleVolumeWithTimeout(int stream) {
-        if (mVolumeInfos.get(stream).unmuteVolumeWithTimeoutIntent != null) {
+    private void commandToggleVolumeWithTimeout(int stream, int timeoutSeconds) {
+        VolumeInfo volumeInfo = mVolumeInfos.get(stream);
+        if (volumeInfo.unmuteVolumeWithTimeoutIntent != null) {
             unmuteVolume(stream);
         } else {
+            if (timeoutSeconds < 1) {
+                return;
+            }
+
             muteVolume(stream);
 
-            mVolumeInfos.get(stream).remainingVolumeMutedSeconds = getMutedVolumeTimeout();
+            volumeInfo.volumeMutedSeconds = timeoutSeconds;
+            volumeInfo.remainingVolumeMutedSeconds = timeoutSeconds;
 
             Intent unmuteIntent = new Intent(this, UnmuteMusicWithTimeoutReceiver.class);
             unmuteIntent.putExtra(QuickControlsService.EXTRA_SOUND_STREAM, stream);
-            mVolumeInfos.get(stream).unmuteVolumeWithTimeoutIntent = PendingIntent.getBroadcast(
+            volumeInfo.unmuteVolumeWithTimeoutIntent = PendingIntent.getBroadcast(
                     this, REQUEST_UNMUTE_VOLUME_WITH_TIMEOUT, unmuteIntent, PendingIntent.FLAG_CANCEL_CURRENT);
             mAlarmManager.setExact(
                     AlarmManager.ELAPSED_REALTIME,
-                    SystemClock.elapsedRealtime() + mVolumeInfos.get(stream).remainingVolumeMutedSeconds * 1000,
-                    mVolumeInfos.get(stream).unmuteVolumeWithTimeoutIntent);
+                    SystemClock.elapsedRealtime() + volumeInfo.remainingVolumeMutedSeconds * 1000,
+                    volumeInfo.unmuteVolumeWithTimeoutIntent);
 
             Runnable periodicNotificationUpdateRunnable = new Runnable() {
                 @Override
@@ -516,7 +534,7 @@ public class QuickControlsService extends Service {
                     }
                 }
             };
-            mVolumeInfos.get(stream).periodicNotificationUpdate = periodicNotificationUpdateRunnable;
+            volumeInfo.periodicNotificationUpdate = periodicNotificationUpdateRunnable;
             mHandler.postDelayed(periodicNotificationUpdateRunnable, 1000);
         }
         updateNotification();
